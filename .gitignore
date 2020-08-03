@@ -1,0 +1,17 @@
+*.DS_Store
+*.pyc
+*.swp
+*.swo
+*.pdb
+dump.rdb
+nohup.out
+
+data/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
