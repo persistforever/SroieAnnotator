@@ -96,6 +96,8 @@ class Application():
 		
         self.index = 0
         print('all data:', len(self.datas))
+        # print(list(self.datas.keys()))
+        # exit()
 
     def init_canvas(self):
         self.choosed_word = {}

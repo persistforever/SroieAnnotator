@@ -10,7 +10,7 @@ import cv2
 import pickle
 
 def read_datas():
-	mode = 'train'
+	main_dir = 'E://Github//SroieAnnotator//data//train//'
 	
 	name_dict = {}
 	# with open(os.path.join(mode, 'ids.txt'), 'r') as fo:
@@ -18,13 +18,13 @@ def read_datas():
 			# name_dict[line.strip()] = None
 
 	datas = {}
-	for file_name in os.listdir(os.path.join(mode, 'pic')):
+	for file_name in os.listdir(os.path.join(main_dir, 'pic')):
 		name = file_name.split('.')[0]
-		# if name not in name_dict:
-			# continue
-		pic_path = os.path.join(mode, 'pic', '%s.jpg' % (name))
-		ocr_path = os.path.join(mode, 'ocr', '%s.txt' % (name))
-		pkl_path = os.path.join(mode, 'data', '%s.pkl' % (name))
+		# if name not in ['X51007231370', 'X51007262315', 'X51007846325', 'X51008128052', 'X51008164510']:
+		# 	continue
+		pic_path = os.path.join(main_dir, 'pic', '%s.jpg' % (name))
+		ocr_path = os.path.join(main_dir, 'ocr', '%s.txt' % (name))
+		pkl_path = os.path.join(main_dir, 'new_data', '%s.pkl' % (name))
 		if os.path.exists(pic_path) and \
 			os.path.exists(ocr_path):
 			datas[name] = {'pic_path': pic_path, 
@@ -55,12 +55,6 @@ def read_datas():
 							if word != {}:
 								words.append(word)
 								word = {}
-						elif chars[cidx]['text'] in [':']:
-							if word != {}:
-								words.append(word)
-								word = {'contain_chars': [cidx]}
-								words.append(word)
-								word = {}
 						else:
 							if 'contain_chars' not in word:
 								word['contain_chars'] = []
@@ -85,6 +79,7 @@ def read_datas():
 
 		data = {'name': name, 'pages': {0: 
 			{'words': words, 'chars': chars, 'size': [image.shape[1], image.shape[0]]}}}
+		print(datas[name]['pkl_path'])
 		pickle.dump(data, open(datas[name]['pkl_path'], 'wb'))
 
 read_datas()
