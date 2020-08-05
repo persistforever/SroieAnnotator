@@ -10,18 +10,11 @@ import cv2
 import pickle
 
 def read_datas():
-	main_dir = 'E://Github//SroieAnnotator//data//train//'
-	
+	main_dir = 'E://Github//SroieAnnotator//data//test//'
 	name_dict = {}
-	# with open(os.path.join(mode, 'ids.txt'), 'r') as fo:
-		# for line in fo:
-			# name_dict[line.strip()] = None
-
 	datas = {}
 	for file_name in os.listdir(os.path.join(main_dir, 'pic')):
 		name = file_name.split('.')[0]
-		# if name not in ['X51007231370', 'X51007262315', 'X51007846325', 'X51008128052', 'X51008164510']:
-		# 	continue
 		pic_path = os.path.join(main_dir, 'pic', '%s.jpg' % (name))
 		ocr_path = os.path.join(main_dir, 'ocr', '%s.txt' % (name))
 		pkl_path = os.path.join(main_dir, 'new_data', '%s.pkl' % (name))

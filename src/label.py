@@ -77,14 +77,14 @@ class Application():
 
     def read_datas(self):
         self.datas = {}
-        self.main_dir = 'E://Github//SroieAnnotator//data//train//'
+        self.main_dir = 'E://Github//SroieAnnotator//data//test//'
         for file_name in os.listdir(os.path.join(self.main_dir, 'pic')):
             name = file_name.split('.')[0]
             pic_path = os.path.join(self.main_dir, 'pic', '%s.jpg' % (name))
             label_path = os.path.join(self.main_dir, 'label', '%s.txt' % (name))
             ocr_path = os.path.join(self.main_dir, 'ocr', '%s.txt' % (name))
             pkl_path = os.path.join(self.main_dir, 'new_data', '%s.pkl' % (name))
-            data_path = os.path.join(self.main_dir, 'new_data_20200731', name, '%s_0.json' % (name))
+            data_path = os.path.join(self.main_dir, 'new_data_20200805', name, '%s_0.json' % (name))
             if os.path.exists(pic_path) and \
                 os.path.exists(ocr_path) and \
                 os.path.exists(pkl_path) and \
@@ -96,8 +96,6 @@ class Application():
 		
         self.index = 0
         print('all data:', len(self.datas))
-        # print(list(self.datas.keys()))
-        # exit()
 
     def init_canvas(self):
         self.choosed_word = {}
@@ -256,15 +254,15 @@ class Application():
             numpy.array(cv2.imread(data['pic_path'])).shape[1], 
             numpy.array(cv2.imread(data['pic_path'])).shape[0]]
         new_data['pages'][0]['words'] = self.words
-        if not os.path.exists(os.path.join(self.main_dir, 'new_data_20200731', self.name)):
-            os.mkdir(os.path.join(self.main_dir, 'new_data_20200731', self.name))
+        if not os.path.exists(os.path.join(self.main_dir, 'new_data_20200805', self.name)):
+            os.mkdir(os.path.join(self.main_dir, 'new_data_20200805', self.name))
         for word in new_data['pages'][0]['words']:
             word['orig_box'] = word['box']
             word['box'] = word['adjust_box']
             del word['adjust_box']
         json.dump(new_data['pages'][0], open(self.datas[self.name]['data_path'], 'w'), indent=4)
         image_target_path = os.path.join(
-        	self.main_dir, 'new_data_20200731', self.name, '%s_0.jpg' % (self.name))
+        	self.main_dir, 'new_data_20200805', self.name, '%s_0.jpg' % (self.name))
         shutil.copy(data['pic_path'], image_target_path)
         print('%s saved' % (self.name))
         
