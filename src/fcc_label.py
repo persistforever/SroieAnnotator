@@ -56,7 +56,7 @@ class Application():
                 self.buttons[name] = button
         button = wx.Button(self.panel2, label='NUL', 
             pos=(820,300), size=[100,50], name='back')
-        self.frame.Bind(wx.EVT_BUTTON, self.on_click_button, button)
+        self.frame.Bind(wx.EVT_BUTTON, self.on_click_clean, button)
         self.buttons['back'] = button
 		
         self.save_button = wx.Button(self.panel2, label='save', pos=(100,300))
@@ -156,6 +156,16 @@ class Application():
 
         for i in self.choosed_word:
         	self.words[i]['ss_label'][key_name] = None
+        self.choosed_word = {}
+
+        self.drawBack(None)
+
+    def on_click_clean(self, event):
+        key_name = event.GetEventObject().GetName()
+        self.buttons[key_name].SetBackgroundColour(self.color_dict[key_name])
+
+        for i in self.choosed_word:
+        	self.words[i]['ss_label'] = {'back': None}
         self.choosed_word = {}
 
         self.drawBack(None)
