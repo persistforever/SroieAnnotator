@@ -61,8 +61,10 @@ class Application():
 		
         self.save_button = wx.Button(self.panel2, label='save', pos=(100,300))
         self.frame.Bind(wx.EVT_BUTTON, self.on_click_save_button, self.save_button)
-        self.next_button = wx.Button(self.panel2, label='next', pos=(500,300))
+        self.next_button = wx.Button(self.panel2, label='next', pos=(300,300))
         self.frame.Bind(wx.EVT_BUTTON, self.on_click_next_button, self.next_button)
+        self.wrong_button = wx.Button(self.panel2, label='wrong', pos=(500,300))
+        self.frame.Bind(wx.EVT_BUTTON, self.on_click_wrong_button, self.wrong_button)
 
         self.bSizer = wx.BoxSizer(wx.VERTICAL)
         self.bSizer.Add(self.bitmap, 0, wx.ALL, 5)
@@ -254,6 +256,32 @@ class Application():
         image_target_path = os.path.join(
         	self.main_dir, 'data', docid, '%s_%d.jpg' % (docid, pageid))
         shutil.copy(data['pic_path'], image_target_path)
+        print('%s saved' % (self.name))
+        
+        string = 'SAVED\n'
+        self.info_text.SetLabel(string)
+        self.info_text.Wrap(800)
+
+    def on_click_wrong_button(self, event):
+        data = self.datas[self.name]
+        new_data = pickle.load(open(self.datas[self.name]['token_path'], 'rb'))
+        docid = '-'.join(self.name.split('.')[0].split('-')[:-1])
+        pageid = int(self.name.split('.')[0].split('-')[-1])
+        
+        new_data['pages'][0]['size'] = [
+            numpy.array(cv2.imread(data['pic_path'])).shape[1], 
+            numpy.array(cv2.imread(data['pic_path'])).shape[0]]
+        new_data['pages'][0]['words'] = self.words
+        if not os.path.exists(os.path.join(self.main_dir, 'data', docid)):
+            os.mkdir(os.path.join(self.main_dir, 'data', docid))
+        for word in new_data['pages'][0]['words']:
+            word['orig_box'] = word['box']
+            word['box'] = word['adjust_box']
+            del word['adjust_box']
+        new_data['pages'][0]['is_wrong'] = True
+        json.dump(new_data['pages'][0], open(self.datas[self.name]['data_path'], 'w'), indent=4)
+        image_target_path = os.path.join(
+        	self.main_dir, 'data', docid, '%s_%d.jpg' % (docid, pageid))
         print('%s saved' % (self.name))
         
         string = 'SAVED\n'
