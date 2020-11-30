@@ -27,10 +27,7 @@ class Application():
         self.panel.SetupScrolling()
         self.panel.SetBackgroundColour('#FFFFFF')
         self.bitmap = wx.StaticBitmap(self.panel, -1, wx.Bitmap(), (0, 0))
-        self.bitmap.SetDoubleBuffered(True)
-        self.bitmap.Bind(wx.EVT_LEFT_DOWN, self.on_mouse_down)
-        self.bitmap.Bind(wx.EVT_LEFT_UP, self.on_mouse_up)
-        self.bitmap.Bind(wx.EVT_MOTION, self.on_mouse_move)
+        # self.bitmap.SetDoubleBuffered(True)
         self.bitmap.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
         self.name_text = wx.StaticText(self.panel2, pos=(100, 400), size=(100, 50))
         self.info_text = wx.StaticText(self.panel2, pos=(100, 500), size=(100, 200))
@@ -52,7 +49,9 @@ class Application():
                 color = self.color_dict[name]
                 x = 100 + 120 * i
                 y = 100 if ktype == 'k' else 200
-                button = wx.Button(self.panel2, label='%s|%s' % (key[0:3], ktype), pos=(x,y), size=[100,50], name=name)
+                button = wx.Button(
+                    self.panel2, label='%s|%s' % (key[0:3], ktype),
+                    pos=(x,y), size=[100,50], name=name, style=wx.NO_BORDER)
                 self.frame.Bind(wx.EVT_BUTTON, self.on_click_button, button)
                 self.buttons[name] = button
         button = wx.Button(self.panel2, label='NUL', 
@@ -115,10 +114,33 @@ class Application():
             word['ss_label'] = {'back': None}
         self.words = data['pages'][0]['words']
 
+        self.bitmap.Destroy()
+        self.bitmap = wx.StaticBitmap(self.panel, -1, wx.Bitmap(), (0, 0))
+        self.bitmap.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
         self.image = wx.Image(
-            self.datas[self.name]['pic_path'], wx.BITMAP_TYPE_ANY)
-        self.bitmap.SetBitmap(wx.Bitmap())
+            self.datas[self.name]['pic_path'], wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        dc = wx.MemoryDC(self.image)
+        dc.SetPen(wx.Pen([0, 0, 0], 2, wx.SOLID))
+        dc.SetBrush(wx.Brush([255, 255, 255], wx.TRANSPARENT))
+        for word in self.words:
+            [l, t, r, b] = word['adjust_box']
+            dc.DrawRectangle(l-2, t-2, r-l+4, b-t+4)
+        dc.SelectObject(wx.NullBitmap)
+        self.bitmap.SetBitmap(self.image)
         self.drawBack()
+
+        # add button to each word
+        self.word_buttons = {}
+        for k, word in enumerate(self.words):
+            [l, t, r, b] = word['adjust_box']
+            bt = wx.Button(
+                self.bitmap, label=word['text'], name=str(k),
+                pos=(l, t), size=(r-l, b-t), style=wx.NO_BORDER)
+            font = wx.Font(int(5.0*(b-t)/15.0), wx.FONTFAMILY_ROMAN, wx.NORMAL, wx.NORMAL)
+            bt.SetFont(font)
+            bt.SetBackgroundColour([240, 240, 240])
+            self.frame.Bind(wx.EVT_BUTTON, self.on_click_word_button, bt)
+            self.word_buttons[str(k)] = bt
 
         self.panel.SetupScrolling()
         self.panel.SetBackgroundColour('#FFFFFF')
@@ -130,60 +152,27 @@ class Application():
         self.panel.SetSizer(self.bSizer1)
         self.name_text.SetLabel(self.name)
         for bkey in self.buttons:
-            self.buttons[bkey].SetBackgroundColour([255,255,255])
+            self.buttons[bkey].SetBackgroundColour([255, 255, 255])
 
-    def on_mouse_down(self, event):
-        c1 = event.GetPosition()
-        self.start_point = [c1.x, c1.y]
-        for i, word in enumerate(self.words):
-            [l, t, r, b] = word['adjust_box']
-            if l <= c1.x <= r and t <= c1.y <= b:
-                self.choosed_word[i] = None
+    def on_click_word_button(self, event):
+        key_name = event.GetEventObject().GetName()
+        self.word_buttons[key_name].SetBackgroundColour([200, 100, 100])
+        self.choosed_word[int(key_name)] = None
         self.drawBack()
 
-    def on_mouse_up(self, event):
-        c1 = event.GetPosition()
-        self.end_point = [c1.x, c1.y]
-        if self.start_point != [-1, -1]:
-            for i, word in enumerate(self.words):
-                [l, t, r, b] = word['adjust_box']
-                if self.start_point[0] <= l < r <= self.end_point[0] and \
-                    self.start_point[1] <= t < b <= self.end_point[1]:
-                    self.choosed_word[i] = None
-        self.start_point = [-1, -1]
-        self.drawBack()
-
-    def on_mouse_move(self, event):
-        c1 = event.GetPosition()
-        self.end_point = [c1.x, c1.y]
-        if self.start_point != [-1, -1]:
-            self.png = self.image.ConvertToBitmap()
-            dc = wx.MemoryDC(self.png)
-            for key in self.color_dict:
-                dc.SetPen(wx.Pen(self.color_dict[key], 2, wx.SOLID))
-                dc.SetBrush(wx.Brush([255, 255, 255], wx.TRANSPARENT))
-                for word in self.words:
-                    for sl in word['ss_label']:
-                        if sl == key:
-                            [l, t, r, b] = word['adjust_box']
-                            dc.DrawRectangle(l-2, t-2, r-l+2, b-t+2)
-            dc.SetPen(wx.Pen([200, 50, 50], 2, wx.PENSTYLE_LONG_DASH))
-            dc.SetBrush(wx.Brush([255, 255, 255], wx.TRANSPARENT))
-            [l, t, r, b] = [
-                self.start_point[0], self.start_point[1],
-                self.end_point[0], self.end_point[1]]
-            dc.DrawRectangle(l, t, r-l-2, b-t-2)
-            dc.SelectObject(wx.NullBitmap)
-            self.bitmap.SetBitmap(self.png)
+    def on_key_down(self, event):
+        keycode = event.GetEventObject()
+        print(keycode)
+        event.Skip()
 
     def on_click_button(self, event):
         key_name = event.GetEventObject().GetName()
         self.buttons[key_name].SetBackgroundColour(self.color_dict[key_name])
 
         for i in self.choosed_word:
+            self.word_buttons[str(i)].SetBackgroundColour(self.color_dict[key_name])
             self.words[i]['ss_label'][key_name] = None
         self.choosed_word = {}
-
         self.drawBack()
 
     def on_click_clean(self, event):
@@ -191,30 +180,13 @@ class Application():
         self.buttons[key_name].SetBackgroundColour(self.color_dict[key_name])
 
         for i in self.choosed_word:
+            self.word_buttons[str(i)].SetBackgroundColour([240, 240, 240])
             self.words[i]['ss_label'] = {'back': None}
         self.choosed_word = {}
 
         self.drawBack()
 
     def drawBack(self):
-        self.png = self.image.ConvertToBitmap()
-        dc = wx.MemoryDC(self.png)
-        for key in self.color_dict:
-            dc.SetPen(wx.Pen(self.color_dict[key], 2, wx.SOLID))
-            dc.SetBrush(wx.Brush([255, 255, 255], wx.TRANSPARENT))
-            for word in self.words:
-                for sl in word['ss_label']:
-                    if sl == key:
-                        [l, t, r, b] = word['adjust_box']
-                        dc.DrawRectangle(l-2, t-2, r-l+2, b-t+2)
-        dc.SetPen(wx.Pen([200, 50, 50], 2, wx.PENSTYLE_LONG_DASH))
-        dc.SetBrush(wx.Brush([255, 255, 255], wx.TRANSPARENT))
-        for i in self.choosed_word:
-            [l, t, r, b] = self.words[i]['adjust_box']
-            dc.DrawRectangle(l, t, r-l-2, b-t-2)
-        dc.SelectObject(wx.NullBitmap)
-        self.bitmap.SetBitmap(self.png)
-
         self.information = {}
         for word in self.words:
             for sl in word['ss_label']:
@@ -272,7 +244,7 @@ class Application():
             del word['adjust_box']
         json.dump(new_data['pages'][0], open(self.datas[self.name]['data_path'], 'w'), indent=4)
         image_target_path = os.path.join(
-        	self.main_dir, 'data', docid, '%s_%d.jpg' % (docid, pageid))
+            self.main_dir, 'data', docid, '%s_%d.jpg' % (docid, pageid))
         shutil.copy(data['pic_path'], image_target_path)
         print('%s saved' % (self.name))
         
@@ -299,8 +271,6 @@ class Application():
                 del word['adjust_box']
         new_data['pages'][0]['is_wrong'] = True
         json.dump(new_data['pages'][0], open(self.datas[self.name]['data_path'], 'w'), indent=4)
-        image_target_path = os.path.join(
-        	self.main_dir, 'data', docid, '%s_%d.jpg' % (docid, pageid))
         print('%s saved' % (self.name))
         
         string = 'SAVED\n'
