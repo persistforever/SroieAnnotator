@@ -653,10 +653,15 @@ def get_keywords():
 def get_keywords_fcc_data():
     source_dir = '../fcc_data/data/'
     pic_dir = '../fcc_data/pic/'
-    keyword_dir = '../fcc_data/keyword/'
+    keyword_dir = '../fcc_data/keyword_method1/'
     cluster_dir = '../fcc_data/cluster/'
     cluster_label_path = '../fcc_data/cluster_label/doc_cls.json'
     docid2label = json.load(open(cluster_label_path, 'r'))
+    new_docid2label = {}
+    for name in docid2label:
+        if int(docid2label[name]) not in [11, 16]:
+            new_docid2label[name] = docid2label[name]
+    docid2label = new_docid2label
 
     n = 0
     data_dict = {}
@@ -671,17 +676,22 @@ def get_keywords_fcc_data():
                     data = json.load(open(data_path))
                     if data.get('is_wrong'):
                         continue
+                    pageid = fname.split('.')[0].split('_')[1]
+                    if docid + '-' + pageid not in docid2label:
+                        continue
                     if 'image' in data:
                         del data['image']
                     data_dict[fname] = {'docid': docid, 'data': data,
                         'data_path': data_path, 'image_path': image_path}
                     word_tfs = {}
-                    for word_dict in data['words'][0:500]:
-                        if not re.match(r'[A-Z]', word_dict['text'][0]):
+                    for word_dict in data['words']:
+                        word = word_dict['text']
+                        if (len(word) < 3 or len(word) > 30) or \
+                            re.findall(r'\d', word):
                             continue
-                        if word_dict['text'] not in word_tfs:
-                            word_tfs[word_dict['text']] = 0
-                        word_tfs[word_dict['text']] += 1
+                        if word not in word_tfs:
+                            word_tfs[word] = 0
+                        word_tfs[word] += 1
                     for word in word_tfs:
                         word_tfs[word] = 1.0 * word_tfs[word] / len(data['words'])
                     data_dict[fname]['word_tfs'] = word_tfs
@@ -699,79 +709,124 @@ def get_keywords_fcc_data():
     n_doc = len(data_dict)
     new_word_dict = {}
     for word in word_dict:
-        if len(word) < 3 or len(word) > 30:
-            continue
         tf_value = numpy.mean(word_dict[word]['tfs'])
         idf_value = math.log(1.0 * n_doc / word_dict[word]['idf'])
         tf_idf_value = tf_value * idf_value
         new_word_dict[word] = {'tf_value': tf_value, 'idf_value': idf_value,
             'tf_idf_value': tf_idf_value}
     word_dict = new_word_dict
-    keyword_dict = collections.OrderedDict(
-        sorted(word_dict.items(), key=lambda x: x[1]['tf_idf_value']))
+    if False:
+        keyword_dict = collections.OrderedDict(
+            sorted(word_dict.items(), key=lambda x: x[1]['tf_idf_value']))
+    else:
+        keyword_dict = collections.OrderedDict(
+            sorted(word_dict.items(), key=lambda x: x[1]['tf_idf_value'])[0:40])
     for word in keyword_dict:
         word_info = keyword_dict[word]
         # print(word, word_info['tf_value'], word_info['idf_value'], word_info['tf_idf_value'])
     keywords = list(keyword_dict.keys())
     # print(keywords)
 
-    # 每篇文档找出前K个最高的词
-    new_keywords = []
-    if True:
-        for i, fname in enumerate(data_dict):
-            doc_keywords = {}
-            for word in data_dict[fname]['data']['words']:
-                if word['text'] in keyword_dict:
-                    doc_keywords[word['text']] = keyword_dict[word['text']]
-            doc_keywords = collections.OrderedDict(
-                sorted(doc_keywords.items(), key=lambda x: x[1]['tf_idf_value'])[0:10])
-            new_keywords.extend(list(doc_keywords.keys()))
-        keywords = list(set(new_keywords))
-    print('keywords number', len(keywords))
+    fname2index, index2fname = {}, {}
+    for i, fname in enumerate(data_dict):
+        fname2index[fname] = i
+        index2fname[i] = fname
 
     # 画出keyword结果
     if False:
+        feature_list = []
+        n = 0
+        doc_keywords_list = []
+        new_keywords = []
         for i, fname in enumerate(data_dict):
             print(i, 'print keyword:', fname)
-            image = cv2.imread(data_dict[fname]['image_path'])
+            tf_dict = {}
+            for word_dict in data_dict[fname]['data']['words']:
+                word = word_dict['text']
+                if word in keyword_dict:
+                    if word not in tf_dict:
+                        tf_dict[word] = 0
+                    tf_dict[word] += 1
+            tfidf_dict = {}
+            for word in tf_dict:
+                tf_dict[word] = 1.0 * tf_dict[word] / len(data_dict[fname]['data']['words'])
+                tfidf_dict[word] = tf_dict[word] * keyword_dict[word]['idf_value']
+            doc_keywords = collections.OrderedDict(
+                sorted(tfidf_dict.items(), key=lambda x: x[1])[0:25])
+            doc_keywords_list.append(doc_keywords)
+            new_keywords.extend(doc_keywords.keys())
+            # 画图
+            if False:
+                image = cv2.imread(data_dict[fname]['image_path'])
+                for word in data_dict[fname]['data']['words']:
+                    if word['text'] in doc_keywords:
+                        [left, top, right, bottom] = [int(t) for t in word['box']]
+                        cv2.rectangle(image,
+                            (left-2, top-2), (right+2, bottom+2), [255, 50, 50], 2)
+                keyword_path = os.path.join(keyword_dir, '%s.jpg' % (fname))
+                cv2.imwrite(keyword_path, image)
+        keywords = list(set(new_keywords))
+        print('true keywords number', len(keywords))
+        time.sleep(5)
+        # 获取index，计算features
+        for i, fname in enumerate(data_dict):
+            print(i, 'calculate feature:', fname)
+            word_boxes = {}
+            for word in keywords:
+                word_boxes[word] = [0, 0, 0, 0]
             for word in data_dict[fname]['data']['words']:
-                if word['text'] in keywords:
-                    [left, top, right, bottom] = [int(t) for t in word['box']]
-                    cv2.rectangle(image, (left-2, top-2), (right+2, bottom+2), [255, 50, 50], 2)
-            keyword_path = os.path.join(keyword_dir, '%s.jpg' % (fname))
-            cv2.imwrite(keyword_path, image)
-
-    # 获取index，计算features
-    fname2index, index2fname = {}, {}
-    feature_list = []
-    n = 0
-    for fname in data_dict:
-        print('calculate feature', n)
-        fname2index[fname] = n
-        index2fname[n] = fname
-        word_boxes = {}
-        for word in keywords:
-            word_boxes[word] = [0, 0, 0, 0]
-        for word in data_dict[fname]['data']['words']:
-            if word['text'] in word_boxes:
-                word_boxes[word['text']] = [
-                    1.0 * word['box'][0] / data_dict[fname]['data']['size'][1],
-                    1.0 * word['box'][1] / data_dict[fname]['data']['size'][0],
-                    1.0 * word['box'][2] / data_dict[fname]['data']['size'][1],
-                    1.0 * word['box'][3] / data_dict[fname]['data']['size'][0]]
-        feature = []
-        for i in range(len(keywords)):
-            for j in range(i+1, len(keywords)):
-                boxi = word_boxes[keywords[i]]
-                boxj = word_boxes[keywords[j]]
-                feature.extend([boxi[t] - boxj[t] for t in range(4)])
-        feature_list.append(feature)
-        n += 1
-    feature_list = numpy.array(feature_list)
-    print(feature_list.shape, len(index2fname))
+                if word['text'] in doc_keywords_list[i]:
+                    word_boxes[word['text']] = [
+                        1.0 * word['box'][0] / data_dict[fname]['data']['size'][1],
+                        1.0 * word['box'][1] / data_dict[fname]['data']['size'][0],
+                        1.0 * word['box'][2] / data_dict[fname]['data']['size'][1],
+                        1.0 * word['box'][3] / data_dict[fname]['data']['size'][0]]
+            feature = []
+            for i in range(len(keywords)):
+                for j in range(i+1, len(keywords)):
+                    boxi = word_boxes[keywords[i]]
+                    boxj = word_boxes[keywords[j]]
+                    feature.extend([boxi[t] - boxj[t] for t in range(4)])
+            feature_list.append(feature)
+        feature_list = numpy.array(feature_list)
+        print(feature_list.shape, len(index2fname))
+    else:
+        feature_list = []
+        # 获取index，计算features
+        for i, fname in enumerate(data_dict):
+            print(i, 'calculate feature:', fname)
+            word_boxes = {}
+            for word in keywords:
+                word_boxes[word] = [0, 0, 0, 0]
+            for word in data_dict[fname]['data']['words']:
+                if word['text'] in keyword_dict:
+                    word_boxes[word['text']] = [
+                        1.0 * word['box'][0] / data_dict[fname]['data']['size'][1],
+                        1.0 * word['box'][1] / data_dict[fname]['data']['size'][0],
+                        1.0 * word['box'][2] / data_dict[fname]['data']['size'][1],
+                        1.0 * word['box'][3] / data_dict[fname]['data']['size'][0]]
+            # 画图
+            if False:
+                image = cv2.imread(data_dict[fname]['image_path'])
+                for word in data_dict[fname]['data']['words']:
+                    if word['text'] in keyword_dict:
+                        [left, top, right, bottom] = [int(t) for t in word['box']]
+                        cv2.rectangle(image,
+                            (left-2, top-2), (right+2, bottom+2), [255, 50, 50], 2)
+                keyword_path = os.path.join(keyword_dir, '%s.jpg' % (fname))
+                cv2.imwrite(keyword_path, image)
+            feature = []
+            for i in range(len(keywords)):
+                for j in range(i+1, len(keywords)):
+                    boxi = word_boxes[keywords[i]]
+                    boxj = word_boxes[keywords[j]]
+                    feature.extend([boxi[t] - boxj[t] for t in range(4)])
+            feature_list.append(feature)
+        feature_list = numpy.array(feature_list)
+        print(feature_list.shape, len(index2fname))
 
     # 聚类
-    clustering = KMeans(n_clusters=10, max_iter=5000).fit(feature_list)
+    clustering = KMeans(n_clusters=15, max_iter=300, verbose=1).fit(feature_list)
     clusters = {}
     for i, label in enumerate(clustering.labels_):
         if label not in clusters:
