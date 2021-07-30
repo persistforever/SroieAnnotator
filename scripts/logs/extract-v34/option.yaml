@@ -1,0 +1,130 @@
+desp: "TAQUE for online"
+option:
+    bert_path: "data/pretrained_models/layoutlmv2_multilingual_model/"
+    wiki_path_trigger: "data/pretrained_models/wiki_chinese_model/trigger/"
+    wiki_path_value: "data/pretrained_models/wiki_chinese_model/value/"
+    cls_path: '/data/caory/datasets/extract_information/20200724/classes.json'
+
+    # pre-processing
+    data_mode: 1
+
+    # data preparation
+    image_scale: 1
+    image_size: 1000
+    n_tokens: &n_tokens 512
+    n_neighbour: 10
+    match_ratio: 0.2
+
+    # model
+    is_weight_decay: False
+    weight_decay_scale: 0.0001
+    learning_rate: 0.00005
+    adam_epsilon: 0.00000001
+    is_pretrain: False
+    is_train_pad: True
+    is_use_position_embedding: False
+    is_use_middle_position: False
+    is_use_predicted: False
+    is_set_kid_label: True
+
+    # data
+    key_from: 'data'
+    data_from: 'shm'
+    is_observe: True
+    is_draw: False
+    model_name_k2t: 'model_pretrain_k2t'
+    model_name_t2v: 'model_pretrain_t2v'
+    logs_dir: '/data/caory/PDFInsight/extract_information/logs/'
+    seq: 'extract-v34'
+    data_dir: 'E://Github/SroieAnnotator/data/fcc_dataset/'
+    valid_data_dir: '/data/caory/datasets/extract_information/20200724/valid_data/'
+
+    # train
+    n_producer: 5
+    n_consumer: 1
+    batch_size: &batch_size 4
+    buffer_size: 10
+    gpus: '2,3'
+    k2t_gpus: '0'
+    t2v_gpus: '1'
+    n_epochs: 3
+    n_restart: 1
+    is_data_aug: True
+    is_debug: True
+    is_valid: False
+    save_epoch_freq: 1
+    is_iter: True
+    valid_names: 'valid'
+    valid_epoch_start: 1
+    valid_epoch_end: 5
+    seed: 1234
+
+    # data_size
+    data_size:
+        batch_index:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - 1
+
+        token_id:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - *n_tokens
+
+        token_widx:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - *n_tokens
+
+        token_box:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - *n_tokens
+                - 8
+
+        token_segment:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - *n_tokens
+
+        token_index:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - *n_tokens
+
+        token_mask:
+            dtype: "float32"
+            size:
+                - *batch_size
+                - *n_tokens
+                - *n_tokens
+
+        token_label_kid:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - *n_tokens
+
+        token_label_vid:
+            dtype: "int32"
+            size:
+                - *batch_size
+                - *n_tokens
+
+        token_label_mask:
+            dtype: "float32"
+            size:
+                - *batch_size
+                - *n_tokens
+
+        coef:
+            dtype: "float32"
+            size:
+                - *batch_size
+                - 1
